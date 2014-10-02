@@ -1,0 +1,24 @@
+{
+  "name": "bone-connect",
+  "version": "0.0.1",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": {
+    "name": "wyicwx",
+    "email": "wyicwx@gmail.com",
+    "web": "http://weibo.com/simplemaple"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "connect-livereload": "~0.4.0",
+    "connect": "~3.2.0",
+    "portscanner": "~1.0.0",
+    "open": "0.0.5",
+    "serve-index": "~1.3.1",
+    "serve-static": "~1.6.3",
+    "underscore": "~1.7.0"
+  }
+}
