@@ -11,6 +11,10 @@
     "email": "wyicwx@gmail.com",
     "web": "http://weibo.com/simplemaple"
   },
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:wyicwx/bone-connect.git"
+  },  
   "license": "MIT",
   "dependencies": {
     "connect-livereload": "~0.4.0",
