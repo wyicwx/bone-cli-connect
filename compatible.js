@@ -3,7 +3,6 @@ var cache = {};
 var _ = require('underscore');
 var fs = require('fs');
 var path = require('path');
-var mkdirp = require('mkdirp');
 var AKOStream = require('AKOStream');
 
 function comp(mod, context) {
@@ -27,7 +26,7 @@ function comp(mod, context) {
 		};
 		bonefs.createReadStream = function() {
 			var args = _.toArray(arguments);
-			return bone.fs.createReadStream.call(bone.fs, args);
+			return bone.createReadStream.apply(bone, args);
 		};
 		bonefs.readdir = function(p, callback) {
 			var result = bone.fs.search(path.join(p, '*'));
@@ -49,7 +48,11 @@ function comp(mod, context) {
 						bonefs.stat(file, callback);
 					});
 				} else {
-					callback(null, bonefileStat);
+					AKOStream.aggre(bone.createReadStream(file)).on('data', function(buffer) {
+						// todo cache buffer 50ms 
+						bonefileStat.size = buffer.length;
+						callback(null, bonefileStat);
+					});
 				}
 			} else if(isDir) {
 				if(!bonebaseStat) {

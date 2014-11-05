@@ -20,10 +20,10 @@ module.exports = function(config_option) {
 		var serveStatic = require('serve-static');
 	} else {
 		var serveIndex = compatible('serve-index');
-		var serveStatic = rewire()
+		var send = compatible('send');
+		var serveStatic = rewire('serve-static');
+		serveStatic.__set__('send', send);
 	}
-
-
 
 	var MAX_PORTS = 30; // Maximum available ports to check after the specified port
 
