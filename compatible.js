@@ -4,6 +4,7 @@ var _ = require('underscore');
 var fs = require('fs');
 var path = require('path');
 var AKOStream = require('AKOStream');
+var origin = AKOStream.origin;
 
 function comp(mod, context) {
 	var bone = require('bone');
@@ -12,21 +13,32 @@ function comp(mod, context) {
 
 		var bonefileStat = null;
 		var bonebaseStat = null;
+		var cachedFile = {};
 
 		var module = cache[mod] = rewire(mod);
 		var bonefs = _.clone(fs);
 		bonefs.readFile = function(file, encoding, callback) {
 			if(bone.fs.exists(file, {notFs: true})) {
-				AKOStream.aggreStream(bone.fs.createReadStream(file, encoding)).on('data', function(buffer) {
+				file = bone.fs.pathResolve(file);
+				if(cachedFile[file]) {
 					callback(null, buffer);
-				});
+				} else {				
+					AKOStream.aggreStream(bone.fs.createReadStream(file, encoding)).on('data', function(buffer) {
+						callback(null, buffer);
+					});
+				}
 			} else {
 				fs.readFile(file, encoding, callback);
 			}
 		};
-		bonefs.createReadStream = function() {
-			var args = _.toArray(arguments);
-			return bone.createReadStream.apply(bone, args);
+		bonefs.createReadStream = function(file) {
+			file = bone.fs.pathResolve(file);
+			if(cachedFile[file]) {
+				return origin(cachedFile[file]);
+			} else {
+				var args = _.toArray(arguments);
+				return bone.createReadStream.apply(bone, args);
+			}
 		};
 		bonefs.readdir = function(p, callback) {
 			var result = bone.fs.search(path.join(p, '*'));
@@ -36,6 +48,7 @@ function comp(mod, context) {
 			callback(null, result);
 		};
 		bonefs.stat = function(file, callback) {
+			file = bone.fs.pathResolve(file);
 			var isFile = bone.fs.exists(file, {notFs: true});
 			var isDir = bone.fs.search(file, {notFs: true}).length > 0;
 			var args = _.toArray(arguments);
@@ -49,7 +62,11 @@ function comp(mod, context) {
 					});
 				} else {
 					AKOStream.aggre(bone.createReadStream(file)).on('data', function(buffer) {
-						// todo cache buffer 50ms 
+						// todo cache buffer  
+						cachedFile[file] = buffer;
+						setTimeout(function() {
+							delete cachedFile[file];
+						}, 50);
 						bonefileStat.size = buffer.length;
 						callback(null, bonefileStat);
 					});
