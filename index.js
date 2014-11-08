@@ -4,7 +4,7 @@ module.exports = function(bone) {
 	return function(config_option) {
 		config_option || (config_option = {});
 		var rewire = require('rewire');
-		var compatible = require('./compatible.js');
+		var compatible = require('bone-compatible');
 		var path = require('path'),
 			connect = require('connect'),
 			http = require('http'),
