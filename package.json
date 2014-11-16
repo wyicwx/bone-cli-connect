@@ -28,6 +28,6 @@
     "send": "~0.10.1",
     "rewire": "~2.1.3",
     "akostream": "0.0.2",
-    "bone-compatible": "0.0.1"
+    "bone-compatible": "0.0.3"
   }
 }
