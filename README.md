@@ -18,13 +18,19 @@ var connect = require('bone-connect')(bone);
 
 ###可选参数
 
-#####port
+在
+```js
+var bone = requ
+```
 
+#####port
+默认值为：8000
 
 #####host
-
+默认值为：0.0.0.0
 
 #####base
-
+默认值为：bonefile.js所在路径
 
 #####livereload
+默认值为：false
