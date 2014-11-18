@@ -12,15 +12,20 @@ npm install bone-connect
 
 ```js
 var bone = require('bone');
-var connect = require('bone-connect')(bone);
+require('bone-connect')(bone);
 ```
 通过命令`bone connect`启动静态服务器
 
 ###可选参数
 
-在
 ```js
-var bone = requ
+var connect = require('bone-connect');
+var params = {
+	port: 8000,
+	host: '0.0.0.0',
+	base: './',
+	livereload: ''	
+};
 ```
 
 #####port
@@ -30,7 +35,9 @@ var bone = requ
 默认值为：0.0.0.0
 
 #####base
-默认值为：bonefile.js所在路径
+默认值为：bonefile.js所在文件夹路径
 
 #####livereload
 默认值为：false
+
+**注**：命令行也支持修改参数
