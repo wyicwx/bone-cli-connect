@@ -20,12 +20,13 @@ require('bone-connect')(bone);
 
 ```js
 var connect = require('bone-connect');
-var params = {
+var options = {
 	port: 8000,
 	host: '0.0.0.0',
 	base: './',
 	livereload: false	
 };
+connect(bone, options);
 ```
 
 #####port
