@@ -29,15 +29,19 @@ var params = {
 ```
 
 #####port
+指定监听的端口号
 默认值为：8000
 
 #####host
+指定监听的ip
 默认值为：0.0.0.0
 
 #####base
+指定根目录地址
 默认值为：bonefile.js所在文件夹路径
 
 #####livereload
+启用[livereload](https://github.com/intesso/connect-livereload)功能
 默认值为：false
 
 **注**：命令行也支持修改参数
