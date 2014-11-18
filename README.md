@@ -45,3 +45,7 @@ var params = {
 默认值为：false
 
 **注**：命令行也支持修改参数
+
+```sh
+bone connect --port 8080 --base ./dist
+```
