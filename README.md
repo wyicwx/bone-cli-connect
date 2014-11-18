@@ -5,7 +5,7 @@
 通过npm安装
 
 ```sh
-npm install bone-connect
+$ npm install bone-connect
 ```
 
 在你的`bonefile.js`里载入bone-connect模块
@@ -48,5 +48,5 @@ connect(bone, options);
 **注**：命令行也支持修改参数
 
 ```sh
-bone connect --port 8080 --base ./dist
+$ bone connect --port 8080 --base ./dist
 ```
