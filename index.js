@@ -84,7 +84,7 @@ module.exports = function(bone, config_option) {
 			}
 
 			options.base = options.base.map(function(base) {
-				return path.resolve(base);
+				return bone.fs.pathResolve(base);
 			});
 
 			// Connect will listen to all interfaces if hostname is null.
