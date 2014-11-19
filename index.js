@@ -12,6 +12,7 @@ module.exports = function(bone, config_option) {
 		open = require('open'),
 		portscanner = require('portscanner'),
 		async = require('async'),
+		Gaze = require('gaze'),
 		_ = require('underscore');
 
 	if(config_option.notBone) {
@@ -184,6 +185,13 @@ module.exports = function(bone, config_option) {
 									console.log(err);
 								}
 							});
+
+						var gaze = new Gaze('**/*', {cwd: bone.fs.base});
+						gaze.on('all', function(event, filepath) {
+							if(event == 'added' || event == 'renamed' || event == 'deleted') {
+								bone.fs.refresh();
+							}
+						});
 					});
 				}
 			]);
