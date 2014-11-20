@@ -186,7 +186,7 @@ module.exports = function(bone, config_option) {
 								}
 							});
 
-						var gaze = new Gaze('**/*', {cwd: bone.fs.base});
+						var gaze = new Gaze(['**/*', '!**/node_modules/**'], {cwd: bone.fs.base});
 						gaze.on('all', function(event, filepath) {
 							if(event == 'added' || event == 'renamed' || event == 'deleted') {
 								bone.fs.refresh();
