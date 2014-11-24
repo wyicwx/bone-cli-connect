@@ -8,11 +8,15 @@
 $ npm install bone-connect
 ```
 
-在你的`bonefile.js`里载入bone-connect模块
+在你的`bonefile.js`里通过`bone.cli()`载入bone-connect模块
 
 ```js
 var bone = require('bone');
-require('bone-connect')(bone);
+var connect = require('bone-connect')({
+	base: './dist'
+});
+
+bone.cli(connect);
 ```
 通过命令`bone connect`启动静态服务器
 
@@ -26,7 +30,7 @@ var options = {
 	base: './',
 	livereload: false	
 };
-connect(bone, options);
+bone.cli(connect(options));
 ```
 
 #####port
