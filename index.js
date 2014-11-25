@@ -85,7 +85,11 @@ module.exports = function(config_option) {
 				}
 
 				options.base = options.base.map(function(base) {
-					return bone.fs.pathResolve(base);
+					if(config_option.notBone) {
+						return path.resolve(base);
+					} else {
+						return bone.fs.pathResolve(base);
+					}
 				});
 
 				// Connect will listen to all interfaces if hostname is null.
@@ -185,13 +189,14 @@ module.exports = function(config_option) {
 										console.log(err);
 									}
 								});
-
-							var gaze = new Gaze(['**/*', '!**/node_modules/**'], {cwd: bone.fs.base});
-							gaze.on('all', function(event, filepath) {
-								if(event == 'added' || event == 'renamed' || event == 'deleted') {
-									bone.fs.refresh();
-								}
-							});
+							if(!config_option.notBone) {
+								var gaze = new Gaze(['**/*', '!**/node_modules/**'], {cwd: bone.fs.base});
+								gaze.on('all', function(event, filepath) {
+									if(event == 'added' || event == 'renamed' || event == 'deleted') {
+										bone.fs.refresh();
+									}
+								});
+							}
 						});
 					}
 				]);
