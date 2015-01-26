@@ -13,7 +13,6 @@ module.exports = function(config_option) {
 			open = require('open'),
 			portscanner = require('portscanner'),
 			async = require('async'),
-			Gaze = require('gaze'),
 			_ = require('underscore');
 
 		if(config_option.notBone) {
@@ -190,11 +189,21 @@ module.exports = function(config_option) {
 									}
 								});
 							if(!config_option.notBone) {
-								var gaze = new Gaze(['**/*', '!**/node_modules/**'], {cwd: bone.fs.base});
-								gaze.on('all', function(event, filepath) {
-									if(event == 'added' || event == 'renamed' || event == 'deleted') {
-										bone.fs.refresh();
-									}
+								var chokidar = require('chokidar');
+								var watcher = chokidar.watch(bone.fs.pathResolve('~'), {
+									ignored: /[\/\\]node_modules/
+								});
+								watcher.on('ready', function() {
+									watcher.on('all', function(event, path) {
+										switch(event) {
+											case 'add':
+											case 'addDir':
+											case 'unlink':
+											case 'unlinkDir':
+												bone.fs.refresh();
+											break;
+										}
+									});
 								});
 							}
 						});
