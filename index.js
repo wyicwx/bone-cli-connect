@@ -188,6 +188,15 @@ module.exports = function(config_option) {
 										console.log(err);
 									}
 								});
+
+							if(options.livereload) {
+								var tinylr = require('tiny-lr');
+
+								tinylr().listen(options.livereload, function() {
+									console.log('livereload server listen on %s', options.livereload);
+								});
+							}
+
 							if(!config_option.notBone) {
 								var chokidar = require('chokidar');
 								var watcher = chokidar.watch(bone.fs.pathResolve('~'), {
@@ -204,6 +213,14 @@ module.exports = function(config_option) {
 											break;
 										}
 									});
+									if(options.livereload) {
+										watcher.on('change', function(file) {
+											if(options.livereloadFilter) {
+												file = options.livereloadFilter(file);
+											}
+											tinylr.changed(file);
+										});
+									}
 								});
 							}
 						});
