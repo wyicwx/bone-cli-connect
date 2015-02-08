@@ -9,6 +9,7 @@ module.exports = function(config_option) {
 			connect = require('connect'),
 			http = require('http'),
 			https = require('https'),
+			url = require('url'),
 			injectLiveReload = require('connect-livereload'),
 			open = require('open'),
 			portscanner = require('portscanner'),
@@ -123,6 +124,27 @@ module.exports = function(config_option) {
 					middleware.unshift(connect.logger('bone'));
 				}
 
+				if(options.livereload) {
+					var liveReloadMap = {};
+					var liveReloadFlag = {};
+					middleware.unshift(function(req, res, next) {
+						var pathname = url.parse(req.url).pathname;
+						if(!liveReloadFlag[pathname]) {
+							liveReloadFlag[pathname] = true;
+							var filePath = bone.fs.pathResolve(path.join(options.base[0], pathname));
+							var trackFile = bone.utils.fs.track(filePath);
+							if(trackFile) {
+								var source = trackFile.pop();
+								if(!liveReloadMap[source]) {
+									liveReloadMap[source] = [];
+								}
+								liveReloadMap[source].push(filePath);
+							}
+						}
+						next();
+					});
+				}
+
 				// Start server.
 				var taskTarget = this.target;
 
@@ -215,10 +237,22 @@ module.exports = function(config_option) {
 									});
 									if(options.livereload) {
 										watcher.on('change', function(file) {
-											if(options.livereloadFilter) {
-												file = options.livereloadFilter(file);
+											file = bone.fs.pathResolve(file);
+											var changed;
+											if(liveReloadMap[file]) {
+												changed = liveReloadMap[file];
+											} else {
+												changed = [file];
 											}
-											tinylr.changed(file);
+
+											changed.forEach(function(f) {
+												if(options.livereloadFilter) {
+													f = options.livereloadFilter(f);
+												}
+												if(f) {
+													tinylr.changed(String(f));
+												}
+											});
 										});
 									}
 								});
