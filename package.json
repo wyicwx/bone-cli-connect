@@ -1,5 +1,5 @@
 {
-  "name": "bone-connect",
+  "name": "bone-cli-connect",
   "version": "0.0.26",
   "description": "",
   "main": "index.js",
