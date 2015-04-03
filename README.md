@@ -1,18 +1,18 @@
-# bone-connect
+# bone-cli-connect
 > 支持boneAPI的静态资源服务器
 
 ###安装
 通过npm安装
 
 ```sh
-$ npm install bone-connect
+$ npm install bone-cli-connect
 ```
 
-在你的`bonefile.js`里通过`bone.cli()`载入bone-connect模块
+在你的`bonefile.js`里通过`bone.cli()`载入bone-cli-connect模块
 
 ```js
 var bone = require('bone');
-var connect = require('bone-connect')({
+var connect = require('bone-cli-connect')({
 	base: './dist'
 });
 
@@ -23,7 +23,7 @@ bone.cli(connect);
 ###可选参数
 
 ```js
-var connect = require('bone-connect');
+var connect = require('bone-cli-connect');
 var options = {
 	port: 8000,
 	host: '0.0.0.0',

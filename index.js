@@ -220,42 +220,41 @@ module.exports = function(config_option) {
 							}
 
 							if(!config_option.notBone) {
-								var chokidar = require('chokidar');
-								var watcher = chokidar.watch(bone.fs.pathResolve('~'), {
-									ignored: /[\/\\]node_modules/
-								});
-								watcher.on('ready', function() {
-									watcher.on('all', function(event, path) {
-										switch(event) {
-											case 'add':
-											case 'addDir':
-											case 'unlink':
-											case 'unlinkDir':
-												bone.fs.refresh();
-											break;
+								bone.helper.autoRefresh(function(watcher) {
+									watcher.on('ready', function() {
+										watcher.on('all', function(event, path) {
+											switch(event) {
+												case 'add':
+												case 'addDir':
+												case 'unlink':
+												case 'unlinkDir':
+													bone.fs.refresh();
+												break;
+											}
+										});
+										if(options.livereload) {
+											watcher.on('change', function(file) {
+												file = bone.fs.pathResolve(file);
+												var changed;
+												if(liveReloadMap[file]) {
+													changed = liveReloadMap[file];
+												} else {
+													changed = [file];
+												}
+
+												changed.forEach(function(f) {
+													if(options.livereloadFilter) {
+														f = options.livereloadFilter(f);
+													}
+													if(f) {
+														tinylr.changed(String(f));
+													}
+												});
+											});
 										}
 									});
-									if(options.livereload) {
-										watcher.on('change', function(file) {
-											file = bone.fs.pathResolve(file);
-											var changed;
-											if(liveReloadMap[file]) {
-												changed = liveReloadMap[file];
-											} else {
-												changed = [file];
-											}
-
-											changed.forEach(function(f) {
-												if(options.livereloadFilter) {
-													f = options.livereloadFilter(f);
-												}
-												if(f) {
-													tinylr.changed(String(f));
-												}
-											});
-										});
-									}
 								});
+
 							}
 						});
 					}
