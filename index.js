@@ -2,8 +2,7 @@
 
 module.exports = function(config_option) {
 	config_option || (config_option = {});
-	return function(command, bone) {		
-		var rewire = require('rewire');
+	return function(command, bone) {
 		var compatible = require('bone-compatible');
 		var path = require('path'),
 			connect = require('connect'),
@@ -14,32 +13,63 @@ module.exports = function(config_option) {
 			open = require('open'),
 			portscanner = require('portscanner'),
 			async = require('async'),
-			_ = require('underscore');
-
-		if(config_option.notBone) {
-			var serveIndex = require('serve-index');
-			var serveStatic = require('serve-static');
-		} else {
-			var serveIndex = compatible('serve-index');
-			var send = compatible('send');
-			var serveStatic = rewire('serve-static');
-			serveStatic.__set__('send', send);
-		}
+			_ = bone.utils,
+			fs = require('fs'),
+			parseurl = require('parseurl'),
+			serveStatic = require('serve-static'),
+			serveIndex = compatible('serve-index');
 
 		var MAX_PORTS = 30; // Maximum available ports to check after the specified port
 
 		var createDefaultMiddleware = function createDefaultMiddleware(connect, options) {
 			var middlewares = [];
 
-			var directory = options.directory || options.base[options.base.length - 1];
-			options.base.forEach(function(base) {
+			middlewares.push(boneMiddleware(options));
+
+			var directory = options.directory || options.base;
+			// options.base.forEach(function(base) {
 				// Serve static files.
-				middlewares.push(serveStatic(base));
-			});
+				middlewares.push(serveStatic(options.base));
+			// });
 			// Make directory browse-able.
 			middlewares.push(serveIndex(directory));
 			return middlewares;
 		};
+
+		var fileCache = {};
+		var boneMiddleware = function(options) {
+			return function(request, response, next) {
+				if(request.method !== 'GET' && request.method !== 'HEAD') {
+					return next();
+				}
+
+				var originalUrl = parseurl.original(request)
+				var pathname = parseurl(request).pathname
+				var hasTrailingSlash = originalUrl.pathname[originalUrl.pathname.length - 1] === '/'
+
+				var pathname = path.join(options.base, pathname);
+				if(bone.fs.existFile(pathname)) {
+					bone.log.debug('connect > hit bone file: '+pathname);
+					if(fileCache[pathname]) {
+						bone.log.debug('connect > cached!');
+						next();
+					} else {
+						bone.log.debug('connect > not cache, build now!');
+						var readStream = bone.fs.createReadStream(pathname);
+						var writeStream = bone.fs.createWriteStream(pathname, {focus: true});
+
+						readStream.pipe(writeStream, {end: false});
+						readStream.on('end', function() {
+							fileCache[pathname] = 'build';
+							next();
+						});
+					}
+				} else {
+					bone.log.debug('connect > normal request path: '+pathname);
+					next();
+				}
+			};
+		} 
 
 		command('connect')
 			.option('--base <base>', 'set root path.')
@@ -74,23 +104,16 @@ module.exports = function(config_option) {
 				}, config_option, cmd_option);
 
 
-
 				if (options.protocol !== 'http' && options.protocol !== 'https') {
-					console.log('protocol option must be \'http\' or \'https\'');
+					bone.log.error('connect', 'protocol option must be \'http\' or \'https\'');
 				}
 
 				// Connect requires the base path to be absolute.
-				if (!Array.isArray(options.base)) {
-					options.base = [options.base];
+				if (Array.isArray(options.base)) {
+					options.base = options.base[0];
 				}
 
-				options.base = options.base.map(function(base) {
-					if(config_option.notBone) {
-						return path.resolve(base);
-					} else {
-						return bone.fs.pathResolve(base);
-					}
-				});
+				options.base = bone.fs.pathResolve(options.base);
 
 				// Connect will listen to all interfaces if hostname is null.
 				if (options.hostname === '*') {
@@ -124,14 +147,14 @@ module.exports = function(config_option) {
 					middleware.unshift(connect.logger('bone'));
 				}
 
-				if(options.livereload) {
+				if(options.livereload !== false) {
 					var liveReloadMap = {};
 					var liveReloadFlag = {};
 					middleware.unshift(function(req, res, next) {
 						var pathname = url.parse(req.url).pathname;
 						if(!liveReloadFlag[pathname]) {
 							liveReloadFlag[pathname] = true;
-							var filePath = bone.fs.pathResolve(path.join(options.base[0], pathname));
+							var filePath = bone.fs.pathResolve(path.join(options.base, pathname));
 							var trackFile = bone.utils.fs.track(filePath);
 							if(trackFile) {
 								var source = trackFile.pop();
@@ -143,122 +166,107 @@ module.exports = function(config_option) {
 						}
 						next();
 					});
+
+
+					if (options.livereload === true) {
+						options.livereload = 35729;
+					} else if(_.isNumber(Number(options.livereload))) {
+						options.livereload = Number(options.livereload);
+					}
+
+					middleware.unshift(injectLiveReload({
+						port: options.livereload
+					}));
 				}
 
 				// Start server.
-				var taskTarget = this.target;
+				var app = connect();
+				var server = null;
 
-				async.waterfall([
-					// find a port for livereload if needed first
-					function(callback) {
+				middleware.forEach(function(mw) {
+					app.use(mw);
+				});
 
-						// Inject live reload snippet
-						if (options.livereload !== false) {
-							if (options.livereload === true) {
-								options.livereload = 35729;
-							}
+				if (options.protocol === 'https') {
+					server = https.createServer({
+						key: options.key || "",
+						cert: options.cert || "",
+						ca: options.ca || "",
+						passphrase: options.passphrase || 'bone-connect',
+					}, app);
+				} else {
+					server = http.createServer(app);
+				}
 
-							// TODO: Add custom ports here?
-							middleware.unshift(injectLiveReload({
-								port: options.livereload
-							}));
-							callback(null);
+				portscanner.findAPortNotInUse(options.port, options.port + MAX_PORTS, options.hostname, function(error, foundPort) {
+					// if the found port doesn't match the option port, and we are forced to use the option port
+					if (options.port !== foundPort) {
+						if(options.useAvailablePort === false) {
+							bone.log.error('connect', 'Port ' + options.port + ' is already in use by another process.');
+							return;
 						} else {
-							callback(null);
+							bone.log.warn('connect', 'Port ' + options.port + ' is already in use by another process.');
+							bone.log.warn('connect', 'Port use ' + foundPort + ' ');
 						}
-					},
-					function() {
+					}
 
-						var app = connect();
-						var server = null;
+					server
+						.listen(foundPort, options.hostname)
+						.on('listening', function() {
+							var address = server.address();
+							var hostname = options.hostname || '0.0.0.0';
+							var target = options.protocol + '://' + hostname + ':' + address.port;
 
-						middleware.forEach(function(mw) {
-							app.use(mw);
+							bone.log.info('connect', 'Started connect web server on ' + target);
+						})
+						.on('error', function(err) {
+							if (err.code === 'EADDRINUSE') {
+								bone.log.error('connect', 'Port ' + foundPort + ' is already in use by another process.');
+							} else {
+								console.log(err);
+							}
 						});
 
-						if (options.protocol === 'https') {
-							server = https.createServer({
-								key: options.key || "",
-								cert: options.cert || "",
-								ca: options.ca || "",
-								passphrase: options.passphrase || 'bone-connect',
-							}, app);
-						} else {
-							server = http.createServer(app);
-						}
+					if(options.livereload) {
+						var tinylr = require('tiny-lr');
 
-						portscanner.findAPortNotInUse(options.port, options.port + MAX_PORTS, options.hostname, function(error, foundPort) {
-							// if the found port doesn't match the option port, and we are forced to use the option port
-							if (options.port !== foundPort && options.useAvailablePort === false) {
-								console.log('Port ' + options.port + ' is already in use by another process.');
-								return;
-							}
-
-							server
-								.listen(foundPort, options.hostname)
-								.on('listening', function() {
-									var address = server.address();
-									var hostname = options.hostname || '0.0.0.0';
-									var target = options.protocol + '://' + hostname + ':' + address.port;
-
-									console.log('Started connect web server on ' + target);
-								})
-								.on('error', function(err) {
-									if (err.code === 'EADDRINUSE') {
-										console.log('Port ' + foundPort + ' is already in use by another process.');
-									} else {
-										console.log(err);
-									}
-								});
-
-							if(options.livereload) {
-								var tinylr = require('tiny-lr');
-
-								tinylr().listen(options.livereload, function() {
-									console.log('livereload server listen on %s', options.livereload);
-								});
-							}
-
-							if(!config_option.notBone) {
-								bone.helper.autoRefresh(function(watcher) {
-									watcher.on('ready', function() {
-										watcher.on('all', function(event, path) {
-											switch(event) {
-												case 'add':
-												case 'addDir':
-												case 'unlink':
-												case 'unlinkDir':
-													bone.fs.refresh();
-												break;
-											}
-										});
-										if(options.livereload) {
-											watcher.on('change', function(file) {
-												file = bone.fs.pathResolve(file);
-												var changed;
-												if(liveReloadMap[file]) {
-													changed = liveReloadMap[file];
-												} else {
-													changed = [file];
-												}
-
-												changed.forEach(function(f) {
-													if(options.livereloadFilter) {
-														f = options.livereloadFilter(f);
-													}
-													if(f) {
-														tinylr.changed(String(f));
-													}
-												});
-											});
-										}
-									});
-								});
-
-							}
+						tinylr().listen(options.livereload, function() {
+							bone.log.info('connect', 'livereload server listen on ' + options.livereload);
 						});
 					}
-				]);
+
+					bone.helper.autoRefresh(function(watcher) {
+						watcher.on('ready', function() {
+							watcher.on('change', function(file) {
+								bone.log.debug('connect > file change: '+file);
+								if((file in fileCache) && fileCache[file] === 'build') {
+									fileCache[file] = true;
+								} else {
+									fileCache = {};
+								}
+
+								if(options.livereload) {
+									file = bone.fs.pathResolve(file);
+									var changed;
+									if(liveReloadMap[file]) {
+										changed = liveReloadMap[file];
+									} else {
+										changed = [file];
+									}
+
+									changed.forEach(function(f) {
+										if(options.livereloadFilter) {
+											f = options.livereloadFilter(f);
+										}
+										if(f) {
+											tinylr.changed(String(f));
+										}
+									});
+								}
+							});
+						});
+					});
+				});
 			});
 	}
 };
