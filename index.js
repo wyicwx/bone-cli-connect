@@ -48,7 +48,7 @@ module.exports = function(config_option) {
 				var hasTrailingSlash = originalUrl.pathname[originalUrl.pathname.length - 1] === '/'
 
 				var pathname = path.join(options.base, pathname);
-				if(bone.fs.existFile(pathname)) {
+				if(bone.fs.existFile(pathname, {notFs: true})) {
 					bone.log.debug('connect > hit bone file: '+pathname);
 					if(fileCache[pathname]) {
 						bone.log.debug('connect > cached!');
