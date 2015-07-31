@@ -16,60 +16,25 @@ module.exports = function(config_option) {
 			_ = bone.utils,
 			fs = require('fs'),
 			parseurl = require('parseurl'),
-			serveStatic = require('serve-static'),
-			serveIndex = compatible('serve-index');
+			rewire = require('rewire'),
+			serveStatic = rewire('serve-static'),
+			serveIndex = compatible('serve-index'),
+			send = compatible('send');
+
+			serveStatic.__set__('send', send);
 
 		var MAX_PORTS = 30; // Maximum available ports to check after the specified port
 
 		var createDefaultMiddleware = function createDefaultMiddleware(connect, options) {
 			var middlewares = [];
 
-			middlewares.push(boneMiddleware(options));
-
 			var directory = options.directory || options.base;
-			// options.base.forEach(function(base) {
-				// Serve static files.
-				middlewares.push(serveStatic(options.base));
-			// });
+			// Serve static files.
+			middlewares.push(serveStatic(options.base));
 			// Make directory browse-able.
 			middlewares.push(serveIndex(directory));
 			return middlewares;
 		};
-
-		var fileCache = {};
-		var boneMiddleware = function(options) {
-			return function(request, response, next) {
-				if(request.method !== 'GET' && request.method !== 'HEAD') {
-					return next();
-				}
-
-				var originalUrl = parseurl.original(request)
-				var pathname = parseurl(request).pathname
-				var hasTrailingSlash = originalUrl.pathname[originalUrl.pathname.length - 1] === '/'
-
-				var pathname = path.join(options.base, pathname);
-				if(bone.fs.existFile(pathname, {notFs: true})) {
-					bone.log.debug('connect > hit bone file: '+pathname);
-					if(fileCache[pathname]) {
-						bone.log.debug('connect > cached!');
-						next();
-					} else {
-						bone.log.debug('connect > not cache, build now!');
-						var readStream = bone.fs.createReadStream(pathname);
-						var writeStream = bone.fs.createWriteStream(pathname, {focus: true});
-
-						readStream.pipe(writeStream, {end: false});
-						readStream.on('end', function() {
-							fileCache[pathname] = 'build';
-							next();
-						});
-					}
-				} else {
-					bone.log.debug('connect > normal request path: '+pathname);
-					next();
-				}
-			};
-		} 
 
 		command('connect')
 			.option('--base <base>', 'set root path.')
@@ -167,12 +132,13 @@ module.exports = function(config_option) {
 						next();
 					});
 
-
 					if (options.livereload === true) {
 						options.livereload = 35729;
 					} else if(_.isNumber(Number(options.livereload))) {
 						options.livereload = Number(options.livereload);
-					}
+					} else {
+						options.livereload = 35729;
+					} 
 
 					middleware.unshift(injectLiveReload({
 						port: options.livereload
@@ -238,13 +204,6 @@ module.exports = function(config_option) {
 					bone.helper.autoRefresh(function(watcher) {
 						watcher.on('ready', function() {
 							watcher.on('change', function(file) {
-								bone.log.debug('connect > file change: '+file);
-								if((file in fileCache) && fileCache[file] === 'build') {
-									fileCache[file] = true;
-								} else {
-									fileCache = {};
-								}
-
 								if(options.livereload) {
 									file = bone.fs.pathResolve(file);
 									var changed;
