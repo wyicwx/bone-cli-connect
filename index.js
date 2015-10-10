@@ -3,6 +3,10 @@
 module.exports = function(config_option) {
 	config_option || (config_option = {});
 	return function(command, bone) {
+		if(bone.version < '0.0.26') {
+			console.log('bone-cli-connect require bone version >= 0.0.26');
+			process.exit(0);
+		}
 		var compatible = require('bone-compatible');
 		var path = require('path'),
 			connect = require('connect'),
