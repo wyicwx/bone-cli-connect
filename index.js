@@ -207,7 +207,7 @@ module.exports = function(config_option) {
 
 					bone.helper.autoRefresh(function(watcher) {
 						watcher.on('ready', function() {
-							watcher.on('change', function(file) {
+							watcher.on('changed', function(file) {
 								if(options.livereload) {
 									file = bone.fs.pathResolve(file);
 									var changed;
