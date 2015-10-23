@@ -1,6 +1,6 @@
 {
   "name": "bone-cli-connect",
-  "version": "0.0.33",
+  "version": "0.1.0",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -18,7 +18,7 @@
   "license": "MIT",
   "dependencies": {
     "async": "~0.9.0",
-    "bone-compatible": "0.0.5",
+    "bone-compatible": "0.0.6",
     "connect": "~3.2.0",
     "connect-livereload": "~0.4.0",
     "open": "0.0.5",

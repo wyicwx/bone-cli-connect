@@ -2,44 +2,11 @@
 
 module.exports = function(config_option) {
 	config_option || (config_option = {});
-	return function(command, bone) {
+	return function(command, bone, getFs) {
 		if(bone.version < '0.0.26') {
 			console.log('bone-cli-connect require bone version >= 0.0.26');
 			process.exit(0);
 		}
-		var compatible = require('bone-compatible');
-		var path = require('path'),
-			connect = require('connect'),
-			http = require('http'),
-			https = require('https'),
-			url = require('url'),
-			injectLiveReload = require('connect-livereload'),
-			open = require('open'),
-			portscanner = require('portscanner'),
-			async = require('async'),
-			_ = bone.utils,
-			fs = require('fs'),
-			parseurl = require('parseurl'),
-			rewire = require('rewire'),
-			serveStatic = rewire('serve-static'),
-			serveIndex = compatible('serve-index'),
-			send = compatible('send');
-
-			serveStatic.__set__('send', send);
-
-		var MAX_PORTS = 30; // Maximum available ports to check after the specified port
-
-		var createDefaultMiddleware = function createDefaultMiddleware(connect, options) {
-			var middlewares = [];
-
-			var directory = options.directory || options.base;
-			// Serve static files.
-			middlewares.push(serveStatic(options.base));
-			// Make directory browse-able.
-			middlewares.push(serveIndex(directory));
-			return middlewares;
-		};
-
 		command('connect')
 			.option('--base <base>', 'set root path.')
 			.option('--host <host>', 'set hostname.')
@@ -48,6 +15,40 @@ module.exports = function(config_option) {
 			.option('--livereload <livereload>', 'set "true" to enable livereload.')
 			.description('Start a connect web server.')
 			.action(function(argv) {
+				var compatible = require('bone-compatible');
+				var bonefs = getFs();
+				var path = require('path'),
+					connect = require('connect'),
+					http = require('http'),
+					https = require('https'),
+					url = require('url'),
+					injectLiveReload = require('connect-livereload'),
+					open = require('open'),
+					portscanner = require('portscanner'),
+					async = require('async'),
+					_ = bone.utils,
+					fs = require('fs'),
+					parseurl = require('parseurl'),
+					rewire = require('rewire'),
+					serveStatic = rewire('serve-static'),
+					serveIndex = compatible('serve-index', null, bonefs),
+					send = compatible('send', null, bonefs);
+
+					serveStatic.__set__('send', send);
+
+				var MAX_PORTS = 30; // Maximum available ports to check after the specified port
+
+				var createDefaultMiddleware = function createDefaultMiddleware(connect, options) {
+					var middlewares = [];
+
+					var directory = options.directory || options.base;
+					// Serve static files.
+					middlewares.push(serveStatic(options.base));
+					// Make directory browse-able.
+					middlewares.push(serveIndex(directory));
+					return middlewares;
+				};
+
 				// cmd_option > config_option > option
 				var cmd_option = _.pick(argv, 'port', 'host', 'debug', 'base', 'livereload');
 				if(cmd_option.debug) {
@@ -82,7 +83,7 @@ module.exports = function(config_option) {
 					options.base = options.base[0];
 				}
 
-				options.base = bone.fs.pathResolve(options.base);
+				options.base = bonefs.pathResolve(options.base);
 
 				// Connect will listen to all interfaces if hostname is null.
 				if (options.hostname === '*') {
@@ -123,7 +124,7 @@ module.exports = function(config_option) {
 						var pathname = url.parse(req.url).pathname;
 						if(!liveReloadFlag[pathname]) {
 							liveReloadFlag[pathname] = true;
-							var filePath = bone.fs.pathResolve(path.join(options.base, pathname));
+							var filePath = bonefs.pathResolve(path.join(options.base, pathname));
 							var trackFile = bone.utils.fs.track(filePath);
 							if(trackFile) {
 								var source = trackFile.pop();
@@ -209,7 +210,7 @@ module.exports = function(config_option) {
 						watcher.on('ready', function() {
 							watcher.on('changed', function(file) {
 								if(options.livereload) {
-									file = bone.fs.pathResolve(file);
+									file = bonefs.pathResolve(file);
 									var changed;
 									if(liveReloadMap[file]) {
 										changed = liveReloadMap[file];
@@ -218,12 +219,30 @@ module.exports = function(config_option) {
 									}
 
 									changed.forEach(function(f) {
-										if(options.livereloadFilter) {
-											f = options.livereloadFilter(f);
+										var changedFile = [f];
+
+										if(bone.utils.fs.getByDependentFile) {
+											var dependenics = bone.utils.fs.getByDependentFile(f);
+
+											changedFile = changedFile.concat(dependenics);
 										}
-										if(f) {
-											tinylr.changed(String(f));
-										}
+
+										changedFile = bone.utils.filter(changedFile, function(file) {
+											if(file.indexOf(options.base) !== -1) {
+												return true;
+											} else {
+												return false;
+											}
+										});
+
+										bone.utils.each(changedFile, function(file) {
+											if(options.livereloadFilter) {
+												file = options.livereloadFilter(file);
+											}
+											if(file) {
+												tinylr.changed(String(file));
+											}
+										});
 									});
 								}
 							});
