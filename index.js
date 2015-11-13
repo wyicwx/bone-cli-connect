@@ -224,7 +224,9 @@ module.exports = function(config_option) {
 										if(bone.utils.fs.getByDependentFile) {
 											var dependenics = bone.utils.fs.getByDependentFile(f);
 
-											changedFile = changedFile.concat(dependenics);
+											if(dependenics) {
+												changedFile = changedFile.concat(dependenics);
+											}
 										}
 
 										changedFile = bone.utils.filter(changedFile, function(file) {
