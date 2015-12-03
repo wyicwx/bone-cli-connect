@@ -16,7 +16,7 @@ module.exports = function(config_option) {
 			.description('Start a connect web server.')
 			.action(function(argv) {
 				var compatible = require('bone-compatible');
-				var bonefs = getFs();
+				var bonefs = bone.fs || getFs();
 				var path = require('path'),
 					connect = require('connect'),
 					http = require('http'),
