@@ -2,9 +2,9 @@
 
 module.exports = function(config_option) {
 	config_option || (config_option = {});
-	return function(command, bone, getFs) {
-		if(bone.version < '0.0.26') {
-			console.log('bone-cli-connect require bone version >= 0.0.26');
+	return function(command, bone, bonefs) {
+		if(bone.version < '0.1.0') {
+			console.log('bone-cli-connect require bone version >= 0.1.0');
 			process.exit(0);
 		}
 		command('connect')
@@ -16,7 +16,6 @@ module.exports = function(config_option) {
 			.description('Start a connect web server.')
 			.action(function(argv) {
 				var compatible = require('bone-compatible');
-				var bonefs = bone.fs || getFs();
 				var path = require('path'),
 					connect = require('connect'),
 					http = require('http'),
