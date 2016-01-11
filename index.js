@@ -205,49 +205,47 @@ module.exports = function(config_option) {
 						});
 					}
 
-					bone.helper.autoRefresh(function(watcher) {
-						watcher.on('ready', function() {
-							watcher.on('changed', function(file) {
-								if(options.livereload) {
-									file = bonefs.pathResolve(file);
-									var changed;
-									if(liveReloadMap[file]) {
-										changed = liveReloadMap[file];
-									} else {
-										changed = [file];
+					var watcher = bone.watch();
+
+					watcher.on('changed', function(file) {
+						if(options.livereload) {
+							file = bonefs.pathResolve(file);
+							var changed;
+							if(liveReloadMap[file]) {
+								changed = liveReloadMap[file];
+							} else {
+								changed = [file];
+							}
+
+							changed.forEach(function(f) {
+								var changedFile = [f];
+
+								if(bone.utils.fs.getByDependentFile) {
+									var dependenics = bone.utils.fs.getByDependentFile(f);
+
+									if(dependenics) {
+										changedFile = changedFile.concat(dependenics);
 									}
-
-									changed.forEach(function(f) {
-										var changedFile = [f];
-
-										if(bone.utils.fs.getByDependentFile) {
-											var dependenics = bone.utils.fs.getByDependentFile(f);
-
-											if(dependenics) {
-												changedFile = changedFile.concat(dependenics);
-											}
-										}
-
-										changedFile = bone.utils.filter(changedFile, function(file) {
-											if(file.indexOf(options.base) !== -1) {
-												return true;
-											} else {
-												return false;
-											}
-										});
-
-										bone.utils.each(changedFile, function(file) {
-											if(options.livereloadFilter) {
-												file = options.livereloadFilter(file);
-											}
-											if(file) {
-												tinylr.changed(String(file));
-											}
-										});
-									});
 								}
+
+								changedFile = bone.utils.filter(changedFile, function(file) {
+									if(file.indexOf(options.base) !== -1) {
+										return true;
+									} else {
+										return false;
+									}
+								});
+
+								bone.utils.each(changedFile, function(file) {
+									if(options.livereloadFilter) {
+										file = options.livereloadFilter(file);
+									}
+									if(file) {
+										tinylr.changed(String(file));
+									}
+								});
 							});
-						});
+						}
 					});
 				});
 			});
